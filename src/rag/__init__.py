@@ -1,16 +1,6 @@
 """
-Module RAG principal
-===================
-
-Ce module contient les composants principaux du système RAG :
-- core : Logique principale du RAG
-- embeddings : Génération d'embeddings avec Mistral et OpenAI
-- retrieval : Système de récupération avec Supabase
-- utils : Utilitaires et helpers
+Système RAG - Retrieval-Augmented Generation.
 """
 
-from .core import RAGSystem
-from .embeddings import EmbeddingProvider
-from .retrieval import VectorRetriever
-
-__all__ = ["RAGSystem", "EmbeddingProvider", "VectorRetriever"]
+__version__ = "1.0.0"
+__author__ = "RAG System"

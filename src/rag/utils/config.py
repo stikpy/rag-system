@@ -7,7 +7,8 @@ Gestion centralisée de la configuration pour le système RAG.
 
 import os
 from typing import Optional
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -33,6 +34,11 @@ class RAGConfig(BaseSettings):
     
     # Database Configuration
     database_url: Optional[str] = Field(None, env="DATABASE_URL")
+    direct_url: Optional[str] = Field(None, env="DIRECT_URL")
+    
+    # Optional: Other vector databases
+    pinecone_api_key: Optional[str] = Field(None, env="PINECONE_API_KEY")
+    pinecone_environment: Optional[str] = Field(None, env="PINECONE_ENVIRONMENT")
     
     # RAG Parameters
     chunk_size: int = Field(1024, env="CHUNK_SIZE")
