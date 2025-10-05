@@ -10,6 +10,7 @@ Ce module implémente le système RAG complet avec :
 """
 
 import logging
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 from mistralai import Mistral
 from openai import OpenAI
