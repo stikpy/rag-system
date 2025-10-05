@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Modèle pour les documents
+model Document {
+  id        String   @id @default(cuid())
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  chunks    DocumentChunk[]
+  queries   Query[]
+
+  @@map("documents")
+}
+
+// Modèle pour les chunks de documents
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  content    String
+  metadata   Json?
+  chunkIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  queries    Query[]
+
+  @@map("document_chunks")
+}
+
+// Modèle pour les requêtes
+model Query {
+  id        String   @id @default(cuid())
+  query     String
+  response  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  documentId String?
+  chunkId    String?
+  document   Document?     @relation(fields: [documentId], references: [id])
+  chunk      DocumentChunk? @relation(fields: [chunkId], references: [id])
+
+  @@map("queries")
+}
+
+// Modèle pour les utilisateurs
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  queries   Query[]
+
+  @@map("users")
+}
+
+// Modèle pour les sessions
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queries   Query[]
+
+  @@map("sessions")
+}
