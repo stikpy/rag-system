@@ -3,7 +3,8 @@ Système RAG principal - Orchestrateur du système de génération augmentée pa
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Union
 import asyncio
 
 from ..retrieval.vector_retriever import VectorRetriever

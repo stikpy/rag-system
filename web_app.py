@@ -16,198 +16,569 @@ app = Flask(__name__)
 # Template HTML simple
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="fr">
+<html lang=\"fr\">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
     <title>🚀 RAG System - Interface de Test</title>
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --bg-gradient: radial-gradient(circle at 20% 20%, rgba(59,130,246,0.35), transparent 55%),
+                              radial-gradient(circle at 80% 0%, rgba(236,72,153,0.35), transparent 55%),
+                              #0f172a;
+            --card-bg: rgba(15, 23, 42, 0.72);
+            --card-border: rgba(148, 163, 184, 0.15);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5f5;
+            --accent: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+            --accent-strong: #6366f1;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            padding: 32px 16px 48px;
         }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 30px;
+
+        main {
+            width: min(1180px, 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
         }
+
+        header {
+            padding: 28px 32px;
+            border-radius: 26px;
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 18px 60px rgba(15, 23, 42, 0.45);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(99,102,241,0.35), transparent 45%);
+            pointer-events: none;
+        }
+
+        header h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 2.5vw + 1rem, 2.6rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        .header-actions {
+            margin-top: 22px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(30, 41, 59, 0.68);
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            backdrop-filter: blur(16px);
+        }
+
+        .chip[data-status=\"operational\"] {
+            border-color: rgba(34, 197, 94, 0.35);
+            color: #bbf7d0;
+        }
+
+        .chip[data-status=\"degraded\"] {
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #fde68a;
+        }
+
+        .chip[data-status=\"offline\"] {
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
         .card {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            position: relative;
+            padding: 26px;
+            border-radius: 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            backdrop-filter: blur(18px);
         }
-        .form-group {
-            margin-bottom: 20px;
+
+        .card h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+
+        .card h2 span {
+            display: inline-flex;
+            width: 38px;
+            height: 38px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(99, 102, 241, 0.18);
+            font-size: 1.1rem;
+        }
+
+        .card p,
+        .card li,
         label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #333;
+            color: var(--text-secondary);
+            line-height: 1.6;
         }
-        input, textarea {
+
+        .card ul {
+            margin: 0;
+            padding-left: 20px;
+            display: grid;
+            gap: 8px;
+        }
+
+        textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            min-height: 150px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        input:focus, textarea:focus {
+
+        textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: rgba(236, 72, 153, 0.45);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
         }
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        .primary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 22px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 16px;
+            background-image: var(--accent);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 16px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
         }
-        button:hover {
+
+        .primary-button:hover:not([disabled]) {
             transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
         }
-        .response {
-            background: #f8f9fa;
-            border-left: 4px solid #28a745;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 5px;
+
+        .primary-button[disabled] {
+            opacity: 0.65;
+            cursor: progress;
         }
-        .status {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.warning { background: #fff3cd; color: #856404; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .metric {
-            text-align: center;
+
+        .response-panel {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
             padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 18px;
+            background: rgba(30, 41, 59, 0.75);
+            border: 1px solid rgba(99, 102, 241, 0.18);
         }
-        .metric-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
+
+        .response-panel.active {
+            display: flex;
+            animation: fadeIn 0.32s ease;
         }
-        .metric-label {
-            color: #666;
-            margin-top: 5px;
+
+        .response-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--text-primary);
+        }
+
+        .badge.success { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; }
+        .badge.warning { background: rgba(245, 158, 11, 0.18); color: #fde68a; }
+        .badge.error { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
+
+        .history-list {
+            display: grid;
+            gap: 12px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .history-item {
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.72);
+            display: grid;
+            gap: 8px;
+        }
+
+        .history-item span {
+            font-size: 0.85rem;
+            color: rgba(148, 163, 184, 0.85);
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .link-tile {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(30, 41, 59, 0.75);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: transform 0.18s ease, border-color 0.18s ease;
+        }
+
+        .link-tile:hover {
+            transform: translateY(-2px);
+            border-color: rgba(236, 72, 153, 0.38);
+            color: white;
+        }
+
+        .loader {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loader.active {
+            display: inline-flex;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 24px 12px 36px;
+            }
+
+            header, .card {
+                padding: 22px;
+            }
+
+            .header-actions {
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🚀 Système RAG - Interface de Test</h1>
-        <p>Testez votre système RAG avec une interface web simple</p>
-    </div>
+    <main>
+        <header>
+            <h1>🚀 Interface de test du système RAG</h1>
+            <p>Formulez une question, visualisez la réponse générée et surveillez l'état du pipeline en temps réel.</p>
+            <div class=\"header-actions\">
+                <span id=\"statusChip\" class=\"chip\" data-status=\"loading\">⏳ Vérification du statut…</span>
+                <span class=\"chip\">⚡️ Embeddings multi-fournisseurs</span>
+                <span class=\"chip\">🛡️ Observabilité intégrée</span>
+            </div>
+        </header>
 
-    <div class="grid">
-        <div class="card">
-            <h2>🤖 Test RAG</h2>
-            <form id="ragForm">
-                <div class="form-group">
-                    <label for="question">Posez votre question:</label>
-                    <textarea id="question" name="question" rows="4" placeholder="Ex: Qu'est-ce que l'intelligence artificielle?"></textarea>
+        <div class=\"dashboard-grid\">
+            <section class=\"card\">
+                <h2><span>🤖</span>Tester le RAG</h2>
+                <form id=\"ragForm\" autocomplete=\"off\">
+                    <label for=\"question\">Votre question</label>
+                    <textarea id=\"question\" name=\"question\" placeholder=\"Ex. Comment le pipeline gère-t-il l'OCR sur les PDF ?\" required></textarea>
+                    <div style=\"display:flex;align-items:center;gap:12px;flex-wrap:wrap;\">
+                        <button id=\"submitBtn\" class=\"primary-button\" type=\"submit\">
+                            <span id=\"submitIcon\">🚀</span>
+                            <span>Générer la réponse</span>
+                        </button>
+                        <div id=\"loadingIndicator\" class=\"loader\"></div>
+                        <span id=\"formHelper\" style=\"color:var(--text-secondary);font-size:0.9rem;\">Aucune donnée n'est stockée — vos requêtes restent locales.</span>
+                    </div>
+                </form>
+
+                <div id=\"responsePanel\" class=\"response-panel\">
+                    <div class=\"response-meta\">
+                        <span class=\"badge\" id=\"timestampBadge\">🕒 En attente</span>
+                        <span class=\"badge success\" id=\"statusBadge\">Prêt</span>
+                    </div>
+                    <div id=\"responseText\" style=\"white-space:pre-line;font-size:1rem;line-height:1.7;\"></div>
                 </div>
-                <button type="submit">🚀 Générer Réponse</button>
-            </form>
-            <div id="response" class="response" style="display: none;">
-                <h3>💬 Réponse:</h3>
-                <div id="responseText"></div>
-            </div>
+            </section>
+
+            <section class=\"card\">
+                <h2><span>📊</span>État du pipeline</h2>
+                <div class=\"history-list\">
+                    <div class=\"history-item\">
+                        <strong>Modules actifs</strong>
+                        <span id=\"modulesList\">Chargement…</span>
+                    </div>
+                    <div class=\"history-item\">
+                        <strong>Modèles disponibles</strong>
+                        <span id=\"modelsList\">Chargement…</span>
+                    </div>
+                    <div class=\"history-item\">
+                        <strong>Version</strong>
+                        <span id=\"versionInfo\">—</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class=\"card\">
+                <h2><span>🕑</span>Historique des requêtes</h2>
+                <ul id=\"historyList\" class=\"history-list\">
+                    <li class=\"history-item\" data-placeholder>
+                        <strong>Aucun échange pour le moment.</strong>
+                        <span>Les questions récentes apparaîtront ici pour faciliter vos itérations.</span>
+                    </li>
+                </ul>
+            </section>
         </div>
 
-        <div class="card">
-            <h2>📊 Statistiques</h2>
-            <div class="metric">
-                <div class="metric-value">✅</div>
-                <div class="metric-label">Status: Opérationnel</div>
-            </div>
-            <div class="metric">
-                <div class="metric-value">4</div>
-                <div class="metric-label">Modèles configurés</div>
-            </div>
-            <div class="metric">
-                <div class="metric-value">6</div>
-                <div class="metric-label">Fonctionnalités</div>
-            </div>
-        </div>
-    </div>
+        <section class=\"card\">
+            <h2><span>🧩</span>Architecture & Intégrations</h2>
+            <p>Le système RAG s'appuie sur un pipeline modulaire capable de gérer l'ingestion de documents, la vectorisation multi-fournisseurs et la génération assistée par contexte.</p>
+            <ul>
+                <li>📄 OCR & pré-traitement pour les PDF, images et textes bruts.</li>
+                <li>🔍 Stockage vectoriel Supabase & recherches par similarité cosinus.</li>
+                <li>🧠 Générateurs compatibles (OpenAI, Mistral, Cohere) orchestrés via le cœur RAG.</li>
+                <li>📈 Observabilité : métriques de latence, suivi des versions et monitoring des modules.</li>
+            </ul>
+        </section>
 
-    <div class="card">
-        <h2>⚙️ Configuration</h2>
-        <p><strong>Modules disponibles:</strong></p>
-        <ul>
-            <li>🤖 RAG System - Génération de réponses contextuelles</li>
-            <li>📄 OCR Processing - Extraction de texte depuis images/PDF</li>
-            <li>🔍 Vector Search - Recherche sémantique</li>
-            <li>📊 Analytics - Statistiques et monitoring</li>
-        </ul>
-        
-        <p><strong>Technologies intégrées:</strong></p>
-        <ul>
-            <li>Mistral AI - Embeddings et génération</li>
-            <li>OpenAI - GPT-4 pour la génération avancée</li>
-            <li>Cohere - Reranking pour améliorer la pertinence</li>
-            <li>Supabase - Base de données vectorielle</li>
-            <li>Prisma - ORM moderne</li>
-            <li>Langchain - Chaînes de traitement</li>
-        </ul>
-    </div>
-
-    <div class="card">
-        <h2>🔗 Liens utiles</h2>
-        <p>
-            <a href="https://github.com/stikpy/rag-system" target="_blank">📚 Documentation GitHub</a> |
-            <a href="http://localhost:5555" target="_blank">🔧 Prisma Studio</a> |
-            <a href="http://localhost:8501" target="_blank">📱 Streamlit (si disponible)</a>
-        </p>
-    </div>
+        <section class=\"card\">
+            <h2><span>🔗</span>Ressources utiles</h2>
+            <div class=\"links-grid\">
+                <a class=\"link-tile\" href=\"https://github.com/stikpy/rag-system\" target=\"_blank\">📚 Documentation GitHub</a>
+                <a class=\"link-tile\" href=\"http://localhost:5555\" target=\"_blank\">🔧 Prisma Studio</a>
+                <a class=\"link-tile\" href=\"http://localhost:8501\" target=\"_blank\">📱 Interface Streamlit</a>
+            </div>
+        </section>
+    </main>
 
     <script>
-        document.getElementById('ragForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const question = document.getElementById('question').value;
-            const responseDiv = document.getElementById('response');
-            const responseText = document.getElementById('responseText');
-            
-            if (question.trim()) {
-                responseDiv.style.display = 'block';
-                responseText.innerHTML = `
-                    <p><strong>Question:</strong> ${question}</p>
-                    <p><strong>Réponse:</strong> Cette fonctionnalité sera implémentée avec le système RAG complet. 
-                    Le système est configuré et prêt à traiter vos questions avec les modèles Mistral AI, OpenAI, et Cohere.</p>
-                    <p><span class="status success">✅ Interface fonctionnelle</span></p>
+        const form = document.getElementById('ragForm');
+        const questionInput = document.getElementById('question');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitIcon = document.getElementById('submitIcon');
+        const loader = document.getElementById('loadingIndicator');
+        const responsePanel = document.getElementById('responsePanel');
+        const responseText = document.getElementById('responseText');
+        const timestampBadge = document.getElementById('timestampBadge');
+        const statusBadge = document.getElementById('statusBadge');
+        const historyList = document.getElementById('historyList');
+        const statusChip = document.getElementById('statusChip');
+        const modulesList = document.getElementById('modulesList');
+        const modelsList = document.getElementById('modelsList');
+        const versionInfo = document.getElementById('versionInfo');
+        const formHelper = document.getElementById('formHelper');
+
+        let history = [];
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
+        async function refreshStatus() {
+            try {
+                const res = await fetch('/api/status');
+                if (!res.ok) {
+                    throw new Error('Réponse invalide');
+                }
+                const data = await res.json();
+
+                updateStatusChip(data.status || 'operational');
+                modulesList.textContent = (data.modules || []).join(' • ') || '—';
+                modelsList.textContent = (data.models || []).join(' • ') || '—';
+                versionInfo.textContent = data.version || '—';
+            } catch (error) {
+                updateStatusChip('offline');
+                modulesList.textContent = 'Statut indisponible';
+                modelsList.textContent = 'Statut indisponible';
+                versionInfo.textContent = '—';
+            }
+        }
+
+        function updateStatusChip(status) {
+            const statusLabels = {
+                operational: '✅ Système opérationnel',
+                degraded: '⚠️ Système dégradé',
+                offline: '❌ Système hors-ligne',
+                loading: '⏳ Vérification du statut…'
+            };
+
+            statusChip.dataset.status = status;
+            statusChip.textContent = statusLabels[status] || statusLabels.loading;
+        }
+
+        function setLoadingState(isLoading) {
+            submitBtn.disabled = isLoading;
+            loader.classList.toggle('active', isLoading);
+            submitIcon.textContent = isLoading ? '⏳' : '🚀';
+            formHelper.textContent = isLoading
+                ? 'Génération en cours…'
+                : 'Aucune donnée n\'est stockée — vos requêtes restent locales.';
+        }
+
+        function updateHistory(question, answer, timestamp) {
+            history.unshift({ question, answer, timestamp });
+            history = history.slice(0, 5);
+
+            historyList.innerHTML = '';
+
+            history.forEach(entry => {
+                const item = document.createElement('li');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <strong>${escapeHtml(entry.question)}</strong>
+                    <span>${escapeHtml(entry.answer)}</span>
+                    <span>🕒 ${escapeHtml(entry.timestamp)}</span>
                 `;
-            } else {
-                responseDiv.style.display = 'block';
-                responseText.innerHTML = '<p><span class="status warning">⚠️ Veuillez saisir une question.</span></p>';
+                historyList.appendChild(item);
+            });
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                responsePanel.classList.add('active');
+                statusBadge.className = 'badge warning';
+                statusBadge.textContent = 'Veuillez saisir une question.';
+                timestampBadge.textContent = '🕒 —';
+                responseText.textContent = '';
+                return;
+            }
+
+            setLoadingState(true);
+
+            try {
+                const res = await fetch('/api/rag', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Erreur serveur');
+                }
+
+                const data = await res.json();
+                const timestampCandidate = data.timestamp ? new Date(data.timestamp) : new Date();
+                const resolvedTimestamp = Number.isNaN(timestampCandidate.getTime()) ? new Date() : timestampCandidate;
+                const formattedTimestamp = resolvedTimestamp.toLocaleString('fr-FR', { hour12: false });
+
+                responsePanel.classList.add('active');
+                statusBadge.className = 'badge success';
+                statusBadge.textContent = 'Réponse générée';
+                timestampBadge.textContent = `🕒 ${formattedTimestamp}`;
+                responseText.innerHTML = `
+                    <div>
+                        <strong>Question</strong><br>${escapeHtml(question)}
+                    </div>
+                    <div style="margin-top:14px;">
+                        <strong>Réponse</strong><br>${escapeHtml(data.answer)}
+                    </div>
+                `;
+
+                updateHistory(question, data.answer, formattedTimestamp);
+                questionInput.value = '';
+            } catch (error) {
+                responsePanel.classList.add('active');
+                statusBadge.className = 'badge error';
+                statusBadge.textContent = 'Une erreur est survenue';
+                timestampBadge.textContent = '🕒 —';
+                responseText.textContent = "Impossible de générer une réponse. Vérifiez que l'API est disponible.";
+            } finally {
+                setLoadingState(false);
             }
         });
+
+        refreshStatus();
+        setInterval(refreshStatus, 30000);
     </script>
 </body>
 </html>
@@ -248,8 +619,8 @@ def status():
 
 if __name__ == '__main__':
     print("🚀 Lancement de l'interface web RAG...")
-    print("📱 L'interface sera disponible sur http://localhost:5000")
+    print("📱 L'interface sera disponible sur http://0.0.0.0:5000")
     print("🛑 Appuyez sur Ctrl+C pour arrêter")
-    
-    app.run(debug=True, host='localhost', port=5000)
+
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
