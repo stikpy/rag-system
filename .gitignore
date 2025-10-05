@@ -440,6 +440,7 @@ cython_debug/
 
 # RAG specific
 embeddings/
+!src/rag/embeddings/
 vectors/
 chunks/
 processed/

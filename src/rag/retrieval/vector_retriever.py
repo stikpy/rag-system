@@ -6,12 +6,15 @@ Ce module implémente la récupération vectorielle en utilisant Supabase
 comme base de données vectorielle.
 """
 
-import numpy as np
-from typing import List, Dict, Any, Optional, Tuple
-from supabase import create_client, Client
+import json
 import logging
-from ..utils.config import config
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+from supabase import Client, create_client
+
 from ..embeddings import EmbeddingProvider
+from ..utils.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +180,7 @@ class VectorRetriever:
             # Utiliser la fonction de similarité vectorielle de Supabase
             # Note: Cette fonction nécessite l'extension pgvector
             result = query_builder.select(
-                "id, content, metadata, source, chunk_id, document_id, created_at"
+                "id, content, embedding, metadata, source, chunk_id, document_id, created_at"
             ).execute()
             
             # Calculer les similarités (simulation - en production, utiliser pgvector)
@@ -185,16 +188,19 @@ class VectorRetriever:
             similarities = []
             
             for doc in documents:
-                if 'embedding' in doc:
-                    # Calculer la similarité cosinus
-                    similarity = self._cosine_similarity(
-                        query_embedding, 
-                        doc['embedding']
-                    )
-                    
-                    if similarity >= similarity_threshold:
-                        doc['similarity_score'] = similarity
-                        similarities.append(doc)
+                embedding = self._normalize_embedding(doc.get('embedding'))
+                if embedding is None:
+                    continue
+
+                # Calculer la similarité cosinus
+                similarity = self._cosine_similarity(
+                    query_embedding,
+                    embedding
+                )
+
+                if similarity >= similarity_threshold:
+                    doc['similarity_score'] = similarity
+                    similarities.append(doc)
             
             # Trier par similarité
             similarities.sort(key=lambda x: x['similarity_score'], reverse=True)
@@ -223,6 +229,32 @@ class VectorRetriever:
         except Exception as e:
             logger.error(f"Erreur lors du calcul de similarité: {str(e)}")
             return 0.0
+
+    def _normalize_embedding(self, raw_embedding: Any) -> Optional[List[float]]:
+        """Convertit une représentation d'embedding en liste de flottants."""
+
+        if raw_embedding is None:
+            return None
+
+        if isinstance(raw_embedding, dict):
+            if 'data' in raw_embedding and isinstance(raw_embedding['data'], list):
+                raw_embedding = raw_embedding['data']
+            else:
+                logger.warning("Embedding Supabase au format inattendu (dict)")
+                return None
+
+        if isinstance(raw_embedding, str):
+            try:
+                raw_embedding = json.loads(raw_embedding)
+            except json.JSONDecodeError:
+                logger.warning("Impossible de décoder l'embedding Supabase en JSON")
+                return None
+
+        try:
+            return [float(value) for value in raw_embedding]
+        except (TypeError, ValueError):
+            logger.warning("Embedding Supabase au format inattendu (non convertible en float)")
+            return None
     
     def get_document_by_id(self, document_id: str) -> Optional[Dict[str, Any]]:
         """Récupère un document par son ID"""
