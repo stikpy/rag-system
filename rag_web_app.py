@@ -735,22 +735,28 @@ def rag_api():
         
         # Vérifier s'il y a des documents dans la base
         from prisma import Prisma
-        prisma = Prisma()
-        await prisma.connect()
+        import asyncio
         
-        # Compter les documents disponibles
-        doc_count = await prisma.query_raw("SELECT COUNT(*) as count FROM documents")
-        section_count = await prisma.query_raw("SELECT COUNT(*) as count FROM nods_page_section")
+        async def get_document_count():
+            prisma = Prisma()
+            await prisma.connect()
+            
+            # Compter les documents disponibles
+            doc_count = await prisma.query_raw("SELECT COUNT(*) as count FROM documents")
+            section_count = await prisma.query_raw("SELECT COUNT(*) as count FROM nods_page_section")
+            
+            total_docs = doc_count[0]['count'] + section_count[0]['count']
+            await prisma.disconnect()
+            return total_docs
         
-        total_docs = doc_count[0]['count'] + section_count[0]['count']
+        # Exécuter la fonction async
+        total_docs = asyncio.run(get_document_count())
         
         if total_docs == 0:
             response = "Aucun document trouvé dans la base de données. Veuillez d'abord ajouter des documents via l'onglet 'Upload Documents'."
         else:
             # Générer la réponse basée sur les documents de la BDD
             response = rag.query(question)
-        
-        await prisma.disconnect()
         
         return jsonify({
             'question': question,

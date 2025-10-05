@@ -437,201 +437,148 @@ HTML_TEMPLATE = """
     </main>
 
     <script>
-        (function () {
-            var form = document.getElementById('ragForm');
-            var questionInput = document.getElementById('question');
-            var submitBtn = document.getElementById('submitBtn');
-            var submitIcon = document.getElementById('submitIcon');
-            var loader = document.getElementById('loadingIndicator');
-            var responsePanel = document.getElementById('responsePanel');
-            var responseText = document.getElementById('responseText');
-            var timestampBadge = document.getElementById('timestampBadge');
-            var statusBadge = document.getElementById('statusBadge');
-            var historyList = document.getElementById('historyList');
-            var statusChip = document.getElementById('statusChip');
-            var modulesList = document.getElementById('modulesList');
-            var modelsList = document.getElementById('modelsList');
-            var versionInfo = document.getElementById('versionInfo');
-            var formHelper = document.getElementById('formHelper');
+        const form = document.getElementById('ragForm');
+        const questionInput = document.getElementById('question');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitIcon = document.getElementById('submitIcon');
+        const loader = document.getElementById('loadingIndicator');
+        const responsePanel = document.getElementById('responsePanel');
+        const responseText = document.getElementById('responseText');
+        const timestampBadge = document.getElementById('timestampBadge');
+        const statusBadge = document.getElementById('statusBadge');
+        const historyList = document.getElementById('historyList');
+        const statusChip = document.getElementById('statusChip');
+        const modulesList = document.getElementById('modulesList');
+        const modelsList = document.getElementById('modelsList');
+        const versionInfo = document.getElementById('versionInfo');
+        const formHelper = document.getElementById('formHelper');
 
-            var statusLabels = {
+        let history = [];
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
+        async function refreshStatus() {
+            try {
+                const res = await fetch('/api/status');
+                if (!res.ok) {
+                    throw new Error('Réponse invalide');
+                }
+                const data = await res.json();
+
+                updateStatusChip(data.status || 'operational');
+                modulesList.textContent = (data.modules || []).join(' • ') || '—';
+                modelsList.textContent = (data.models || []).join(' • ') || '—';
+                versionInfo.textContent = data.version || '—';
+            } catch (error) {
+                updateStatusChip('offline');
+                modulesList.textContent = 'Statut indisponible';
+                modelsList.textContent = 'Statut indisponible';
+                versionInfo.textContent = '—';
+            }
+        }
+
+        function updateStatusChip(status) {
+            const statusLabels = {
                 operational: '✅ Système opérationnel',
                 degraded: '⚠️ Système dégradé',
                 offline: '❌ Système hors-ligne',
                 loading: '⏳ Vérification du statut…'
             };
 
-            var history = [];
+            statusChip.dataset.status = status;
+            statusChip.textContent = statusLabels[status] || statusLabels.loading;
+        }
 
-            function updateStatusChip(status) {
-                statusChip.setAttribute('data-status', status);
-                statusChip.textContent = statusLabels[status] || statusLabels.loading;
-            }
+        function setLoadingState(isLoading) {
+            submitBtn.disabled = isLoading;
+            loader.classList.toggle('active', isLoading);
+            submitIcon.textContent = isLoading ? '⏳' : '🚀';
+            formHelper.textContent = isLoading
+                ? 'Génération en cours…'
+                : 'Aucune donnée n\'est stockée — vos requêtes restent locales.';
+        }
 
-            function setLoadingState(isLoading) {
-                submitBtn.disabled = isLoading;
-                if (isLoading) {
-                    loader.classList.add('active');
-                    statusBadge.className = 'badge warning';
-                    statusBadge.textContent = '⏳ Génération en cours…';
-                    timestampBadge.textContent = '🕒 —';
-                } else {
-                    loader.classList.remove('active');
-                }
-                submitIcon.textContent = isLoading ? '⏳' : '🚀';
-                formHelper.textContent = isLoading
-                    ? 'Génération en cours…'
-                    : "Aucune donnée n'est stockée — vos requêtes restent locales.";
-            }
+        function updateHistory(question, answer, timestamp) {
+            history.unshift({ question, answer, timestamp });
+            history = history.slice(0, 5);
 
-            function renderResponse(question, answer, formattedTimestamp) {
+            historyList.innerHTML = '';
+
+            history.forEach(entry => {
+                const item = document.createElement('li');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <strong>${escapeHtml(entry.question)}</strong>
+                    <span>${escapeHtml(entry.answer)}</span>
+                    <span>🕒 ${escapeHtml(entry.timestamp)}</span>
+                `;
+                historyList.appendChild(item);
+            });
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const question = questionInput.value.trim();
+
+            if (!question) {
                 responsePanel.classList.add('active');
-                statusBadge.className = 'badge success';
-                statusBadge.textContent = '✅ Réponse générée';
-
-                timestampBadge.textContent = '🕒 ' + formattedTimestamp;
-
-                responseText.innerHTML = '';
-
-                var questionBlock = document.createElement('div');
-                var questionLabel = document.createElement('strong');
-                questionLabel.textContent = 'Question';
-                questionBlock.appendChild(questionLabel);
-                questionBlock.appendChild(document.createElement('br'));
-                questionBlock.appendChild(document.createTextNode(question));
-
-                var answerBlock = document.createElement('div');
-                answerBlock.style.marginTop = '14px';
-                var answerLabel = document.createElement('strong');
-                answerLabel.textContent = 'Réponse';
-                answerBlock.appendChild(answerLabel);
-                answerBlock.appendChild(document.createElement('br'));
-                answerBlock.appendChild(document.createTextNode(answer));
-
-                responseText.appendChild(questionBlock);
-                responseText.appendChild(answerBlock);
+                statusBadge.className = 'badge warning';
+                statusBadge.textContent = 'Veuillez saisir une question.';
+                timestampBadge.textContent = '🕒 —';
+                responseText.textContent = '';
+                return;
             }
 
-            function renderHistory() {
-                historyList.innerHTML = '';
+            setLoadingState(true);
 
-                if (history.length === 0) {
-                    var placeholder = document.createElement('li');
-                    placeholder.className = 'history-item';
-                    placeholder.setAttribute('data-placeholder', '');
-
-                    var title = document.createElement('strong');
-                    title.textContent = 'Aucun échange pour le moment.';
-                    var subtitle = document.createElement('span');
-                    subtitle.textContent = 'Les questions récentes apparaîtront ici pour faciliter vos itérations.';
-
-                    placeholder.appendChild(title);
-                    placeholder.appendChild(subtitle);
-                    historyList.appendChild(placeholder);
-                    return;
-                }
-
-                history.forEach(function (entry) {
-                    var item = document.createElement('li');
-                    item.className = 'history-item';
-
-                    var questionEl = document.createElement('strong');
-                    questionEl.textContent = entry.question;
-
-                    var answerEl = document.createElement('span');
-                    answerEl.textContent = entry.answer;
-
-                    var timeEl = document.createElement('span');
-                    timeEl.textContent = '🕒 ' + entry.timestamp;
-
-                    item.appendChild(questionEl);
-                    item.appendChild(answerEl);
-                    item.appendChild(timeEl);
-                    historyList.appendChild(item);
-                });
-            }
-
-            function recordHistory(entry) {
-                history.unshift(entry);
-                if (history.length > 5) {
-                    history.length = 5;
-                }
-                renderHistory();
-            }
-
-            function refreshStatus() {
-                fetch('/api/status')
-                    .then(function (res) {
-                        if (!res.ok) {
-                            throw new Error('Réponse invalide');
-                        }
-                        return res.json();
-                    })
-                    .then(function (data) {
-                        updateStatusChip(data.status || 'operational');
-                        modulesList.textContent = (data.modules || []).join(' • ') || '—';
-                        modelsList.textContent = (data.models || []).join(' • ') || '—';
-                        versionInfo.textContent = data.version || '—';
-                    })
-                    .catch(function () {
-                        updateStatusChip('offline');
-                        modulesList.textContent = 'Statut indisponible';
-                        modelsList.textContent = 'Statut indisponible';
-                        versionInfo.textContent = '—';
-                    });
-            }
-
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
-                var question = questionInput.value.trim();
-
-                if (!question) {
-                    responsePanel.classList.add('active');
-                    statusBadge.className = 'badge warning';
-                    statusBadge.textContent = '⚠️ Veuillez saisir une question.';
-                    timestampBadge.textContent = '🕒 —';
-                    responseText.textContent = '';
-                    return;
-                }
-
-                setLoadingState(true);
-
-                fetch('/api/rag', {
+            try {
+                const res = await fetch('/api/rag', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question })
-                })
-                    .then(function (res) {
-                        if (!res.ok) {
-                            throw new Error('Erreur serveur');
-                        }
-                        return res.json();
-                    })
-                    .then(function (data) {
-                        var timestampSource = data.timestamp ? new Date(data.timestamp) : new Date();
-                        var timestampValue = isNaN(timestampSource.getTime()) ? new Date() : timestampSource;
-                        var formattedTimestamp = timestampValue.toLocaleString('fr-FR', { hour12: false });
-                        var answer = data.answer ? String(data.answer) : '';
+                    body: JSON.stringify({ question })
+                });
 
-                        renderResponse(question, answer, formattedTimestamp);
-                        recordHistory({ question: question, answer: answer, timestamp: formattedTimestamp });
-                        questionInput.value = '';
-                        setLoadingState(false);
-                    })
-                    .catch(function () {
-                        responsePanel.classList.add('active');
-                        statusBadge.className = 'badge error';
-                        statusBadge.textContent = '❌ Une erreur est survenue';
-                        timestampBadge.textContent = '🕒 —';
-                        responseText.textContent = "Impossible de générer une réponse. Vérifiez que l'API est disponible.";
-                        setLoadingState(false);
-                    });
-            });
+                if (!res.ok) {
+                    throw new Error('Erreur serveur');
+                }
 
-            refreshStatus();
-            renderHistory();
-            setInterval(refreshStatus, 30000);
-        })();
+                const data = await res.json();
+                const timestampCandidate = data.timestamp ? new Date(data.timestamp) : new Date();
+                const resolvedTimestamp = Number.isNaN(timestampCandidate.getTime()) ? new Date() : timestampCandidate;
+                const formattedTimestamp = resolvedTimestamp.toLocaleString('fr-FR', { hour12: false });
+
+                responsePanel.classList.add('active');
+                statusBadge.className = 'badge success';
+                statusBadge.textContent = 'Réponse générée';
+                timestampBadge.textContent = `🕒 ${formattedTimestamp}`;
+                responseText.innerHTML = `
+                    <div>
+                        <strong>Question</strong><br>${escapeHtml(question)}
+                    </div>
+                    <div style="margin-top:14px;">
+                        <strong>Réponse</strong><br>${escapeHtml(data.answer)}
+                    </div>
+                `;
+
+                updateHistory(question, data.answer, formattedTimestamp);
+                questionInput.value = '';
+            } catch (error) {
+                responsePanel.classList.add('active');
+                statusBadge.className = 'badge error';
+                statusBadge.textContent = 'Une erreur est survenue';
+                timestampBadge.textContent = '🕒 —';
+                responseText.textContent = "Impossible de générer une réponse. Vérifiez que l'API est disponible.";
+            } finally {
+                setLoadingState(false);
+            }
+        });
+
+        refreshStatus();
+        setInterval(refreshStatus, 30000);
     </script>
 </body>
 </html>
